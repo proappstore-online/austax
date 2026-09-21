@@ -19,6 +19,7 @@ export type ReturnDraft = {
 
 type Props = {
   initial?: ReturnDraft;
+  startStep?: number;
   onSave: (draft: ReturnDraft) => void;
   onClose: () => void;
 };
@@ -87,8 +88,8 @@ function ToggleList({
   );
 }
 
-export function DraftWizard({ initial, onSave, onClose }: Props) {
-  const [step, setStep] = useState(0);
+export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) {
+  const [step, setStep] = useState(startStep);
   const [draft, setDraft] = useState<ReturnDraft>(
     initial ?? {
       residency: "",

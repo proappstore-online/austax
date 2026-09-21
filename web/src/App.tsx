@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Bot,
@@ -52,6 +52,33 @@ const starterDeductions: Deduction[] = [
   },
 ];
 
+type StoredPreparation = {
+  draft: ReturnDraft | null;
+  deductions: Deduction[];
+  documents: string[];
+};
+
+const preparationStorageKey = "austax-preparation-v1";
+
+function loadPreparation(): StoredPreparation {
+  try {
+    const saved = sessionStorage.getItem(preparationStorageKey);
+    if (!saved) {
+      return { draft: null, deductions: starterDeductions, documents: [] };
+    }
+    const parsed = JSON.parse(saved) as Partial<StoredPreparation>;
+    return {
+      draft: parsed.draft ?? null,
+      deductions: Array.isArray(parsed.deductions)
+        ? parsed.deductions
+        : starterDeductions,
+      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+    };
+  } catch {
+    return { draft: null, deductions: starterDeductions, documents: [] };
+  }
+}
+
 const format = (amount: number) =>
   new Intl.NumberFormat("en-AU", {
     style: "currency",
@@ -60,15 +87,23 @@ const format = (amount: number) =>
   }).format(amount);
 
 export default function App() {
+  const [savedPreparation] = useState(loadPreparation);
   const [active, setActive] = useState("Overview");
-  const [deductions, setDeductions] = useState(starterDeductions);
-  const [documents, setDocuments] = useState<string[]>([]);
+  const [deductions, setDeductions] = useState(savedPreparation.deductions);
+  const [documents, setDocuments] = useState<string[]>(
+    savedPreparation.documents,
+  );
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
-  const [draft, setDraft] = useState<ReturnDraft | null>(null);
+  const [draft, setDraft] = useState<ReturnDraft | null>(
+    savedPreparation.draft,
+  );
+  const [draftStep, setDraftStep] = useState(0);
+  const [documentMessage, setDocumentMessage] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const totalDeductions = useMemo(
     () => deductions.reduce((total, item) => total + item.amount, 0),
@@ -76,9 +111,17 @@ export default function App() {
   );
   const completeCount = deductions.filter((item) => item.done).length;
 
+  useEffect(() => {
+    sessionStorage.setItem(
+      preparationStorageKey,
+      JSON.stringify({ draft, deductions, documents }),
+    );
+  }, [deductions, documents, draft]);
+
   async function askAssistant() {
     const cleaned = question.trim();
-    if (!cleaned) return;
+    if (!cleaned || isAsking) return;
+    setIsAsking(true);
     setReply("Checking the AusTax Guide…");
     setQuestion("");
     try {
@@ -88,7 +131,28 @@ export default function App() {
       setReply(
         "I can help organise what you need to check, but I can’t decide eligibility, calculate a final outcome, or lodge a return. Check the official ATO guidance or speak with a registered tax agent before lodging.",
       );
+    } finally {
+      setIsAsking(false);
     }
+  }
+
+  function openDraft(step = 0) {
+    setDraftStep(step);
+    setShowDraft(true);
+  }
+
+  function openSection(label: (typeof navItems)[number][0]) {
+    setActive(label);
+    setShowMenu(false);
+    if (label === "Income") return openDraft(1);
+    if (label === "Deductions") return openDraft(2);
+    if (label === "Documents") {
+      requestAnimationFrame(() =>
+        document.getElementById("documents")?.scrollIntoView({ behavior: "smooth" }),
+      );
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function addDeduction(title: string) {
@@ -107,10 +171,18 @@ export default function App() {
 
   function upload(files: FileList | null) {
     if (!files?.length) return;
-    setDocuments((items) => [
-      ...items,
-      ...Array.from(files).map((file) => file.name),
-    ]);
+    const selected = Array.from(files);
+    const accepted = selected.filter(
+      (file) =>
+        /\.(pdf|jpe?g|png)$/i.test(file.name) && file.size <= 10 * 1024 * 1024,
+    );
+    const rejected = selected.length - accepted.length;
+    setDocuments((items) => [...new Set([...items, ...accepted.map((file) => file.name)])]);
+    setDocumentMessage(
+      rejected
+        ? `${rejected} file${rejected === 1 ? " was" : "s were"} not added. Use PDF, JPG or PNG files up to 10MB.`
+        : `${accepted.length} file${accepted.length === 1 ? "" : "s"} added for this browser session. Files are not uploaded.`,
+    );
   }
 
   function saveDraft(nextDraft: ReturnDraft) {
@@ -129,7 +201,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#top" onClick={() => setActive("Overview")}>
+        <a className="brand" href="#top" onClick={() => openSection("Overview")}>
           <span className="brand-mark">a</span>
           <span>AusTax</span>
         </a>
@@ -137,11 +209,26 @@ export default function App() {
           2025–26 return <ChevronRight size={14} />
         </div>
         <div className="top-actions">
-          <button className="help-button">
+          <button
+            className="help-button"
+            onClick={() =>
+              document
+                .getElementById("assistant")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
             <CircleHelp size={18} />
             <span>Help</span>
           </button>
-          <button className="avatar" aria-label="Open profile">
+          <button
+            className="avatar"
+            aria-label="Show privacy reminder"
+            onClick={() =>
+              setReply(
+                "AusTax keeps this preparation checklist in this browser session. Do not enter a TFN, myGov password, bank login, or identity-document number.",
+              )
+            }
+          >
             AS
           </button>
         </div>
@@ -161,12 +248,7 @@ export default function App() {
             <button
               key={label}
               className={`nav-item ${active === label ? "active" : ""}`}
-              onClick={() => {
-                setActive(label);
-                if (label === "Income" || label === "Deductions")
-                  setShowDraft(true);
-                setShowMenu(false);
-              }}
+              onClick={() => openSection(label)}
             >
               <Icon size={18} />
               <span>{label}</span>
@@ -185,9 +267,14 @@ export default function App() {
               myGov password or bank login.
             </span>
           </div>
-          <button className="tax-agent">
+          <a
+            className="tax-agent"
+            href="https://www.tpb.gov.au/public-register"
+            target="_blank"
+            rel="noreferrer"
+          >
             Need a tax agent? <ArrowUpRight size={14} />
-          </button>
+          </a>
         </div>
       </aside>
       {showMenu && (
@@ -205,12 +292,12 @@ export default function App() {
         <section className="welcome-row">
           <div>
             <p className="eyebrow">INDIVIDUAL TAX RETURN</p>
-            <h1>Good morning, Alex.</h1>
+            <h1>Prepare your return with confidence.</h1>
             <p className="subhead">
               Let’s get your return ready. You’re making great progress.
             </p>
           </div>
-          <button className="start-draft" onClick={() => setShowDraft(true)}>
+          <button className="start-draft" onClick={() => openDraft()}>
             {draft ? (
               <>
                 <Check size={16} /> Review your draft
@@ -237,7 +324,7 @@ export default function App() {
                 {draft.considerations.length === 1 ? "" : "s"}
               </p>
             </div>
-            <button className="link-button" onClick={() => setShowDraft(true)}>
+            <button className="link-button" onClick={() => openDraft()}>
               Open draft <ChevronRight size={16} />
             </button>
           </section>
@@ -276,7 +363,7 @@ export default function App() {
             <div className="card-actions">
               <button
                 className="primary-button"
-                onClick={() => setActive("Deductions")}
+                onClick={() => openSection("Deductions")}
               >
                 Review deductions <ArrowUpRight size={17} />
               </button>
@@ -301,7 +388,7 @@ export default function App() {
               </div>
               <button
                 className="link-button"
-                onClick={() => setActive("Overview")}
+                onClick={() => openSection("Overview")}
               >
                 View all <ChevronRight size={16} />
               </button>
@@ -309,36 +396,34 @@ export default function App() {
             <div className="progress-card">
               <div className="progress-meta">
                 <span>RETURN PROGRESS</span>
-                <b>2 of 5 complete</b>
+                <b>{draft ? "5 of 5 complete" : "0 of 5 complete"}</b>
               </div>
               <div className="progress-bar">
-                <i />
+                <i style={{ width: draft ? "100%" : "0%" }} />
               </div>
               <div className="steps">
                 {(
                   [
-                    ["Your details", "Complete", true],
-                    ["Income", "Complete", true],
-                    ["Deductions", "Needs review", false],
-                    ["Medicare & offsets", "Not started", false],
-                    ["Final review", "Locked", false],
+                    ["Your details", draft ? "Complete" : "Not started", Boolean(draft)],
+                    ["Income", draft ? "Complete" : "Not started", Boolean(draft)],
+                    ["Deductions", draft ? "Complete" : "Not started", Boolean(draft)],
+                    ["Medicare & offsets", draft ? "Complete" : "Not started", Boolean(draft)],
+                    ["Final review", draft ? "Complete" : "Locked", Boolean(draft)],
                   ] as [string, string, boolean][]
                 ).map(([title, status, done], index) => (
                   <button
                     className="step"
                     key={title}
                     onClick={() =>
-                      setActive(
-                        index === 1
-                          ? "Income"
-                          : index === 2
-                            ? "Deductions"
-                            : "Overview",
-                      )
+                      index === 1
+                        ? openSection("Income")
+                        : index === 2
+                          ? openSection("Deductions")
+                          : openSection("Overview")
                     }
                   >
                     <span
-                      className={`step-dot ${done ? "done" : index === 2 ? "pending" : ""}`}
+                    className={`step-dot ${done ? "done" : index === 2 ? "pending" : ""}`}
                     >
                       {done ? <Check size={13} /> : index + 1}
                     </span>
@@ -353,7 +438,7 @@ export default function App() {
             </div>
           </div>
 
-          <aside className="assistant-card">
+          <aside className="assistant-card" id="assistant">
             <div className="assistant-head">
               <span className="ai-icon">
                 <Sparkles size={18} />
@@ -362,7 +447,10 @@ export default function App() {
                 <p className="eyebrow">AUSTAX GUIDE · PAGS</p>
                 <h2>Ask anything</h2>
               </div>
-              <button aria-label="More assistant options">
+              <button
+                aria-label="More assistant options"
+                onClick={() => setReply("AusTax Guide provides general preparation information only. It cannot access myTax, determine eligibility, or lodge a return.")}
+              >
                 <MoreHorizontal size={19} />
               </button>
             </div>
@@ -401,7 +489,11 @@ export default function App() {
                 onKeyDown={(e) => e.key === "Enter" && askAssistant()}
                 placeholder="Ask AusTax Assist…"
               />
-              <button onClick={askAssistant} aria-label="Ask assistant">
+              <button
+                onClick={askAssistant}
+                aria-label="Ask assistant"
+                disabled={isAsking}
+              >
                 <ArrowUpRight size={17} />
               </button>
             </div>
@@ -470,7 +562,7 @@ export default function App() {
             </p>
           </article>
 
-          <article className="documents-card">
+          <article className="documents-card" id="documents">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">YOUR DOCUMENTS</p>
@@ -488,6 +580,10 @@ export default function App() {
               ref={fileInput}
               type="file"
               multiple
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              onClick={(event) => {
+                event.currentTarget.value = "";
+              }}
               onChange={(event) => upload(event.target.files)}
               hidden
             />
@@ -513,6 +609,11 @@ export default function App() {
               </span>
               <small>PDF, JPG or PNG · max 10MB</small>
             </button>
+            {documentMessage && (
+              <p className="document-message" role="status">
+                {documentMessage}
+              </p>
+            )}
           </article>
         </section>
       </main>
@@ -549,7 +650,9 @@ export default function App() {
       )}
       {showDraft && (
         <DraftWizard
+          key={`${draftStep}-${draft ? "saved" : "new"}`}
           initial={draft ?? undefined}
+          startStep={draftStep}
           onSave={saveDraft}
           onClose={() => setShowDraft(false)}
         />

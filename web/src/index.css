@@ -188,6 +188,7 @@ button {
   color: #526059;
   background: transparent;
   font-size: 12px;
+  text-decoration: none;
 }
 main {
   max-width: 1320px;
@@ -492,9 +493,9 @@ main {
 }
 .progress-bar i {
   display: block;
-  width: 42%;
   height: 100%;
   background: #3d8b76;
+  transition: width 0.2s ease;
 }
 .steps {
   padding: 7px 10px 8px;
@@ -792,6 +793,12 @@ main {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid #e3e7e3;
+}
+.document-message {
+  margin: 12px 0 0;
+  color: #65736c;
+  font-size: 11px;
+  line-height: 1.45;
 }
 .file-row > span:nth-child(2) {
   flex: 1;
