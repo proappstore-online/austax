@@ -110,6 +110,13 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
     () => Boolean(draft.residency && draft.income.length && draft.recordStatus),
     [draft],
   );
+  const firstRequiredStep = !draft.residency
+    ? 0
+    : !draft.income.length
+      ? 1
+      : !draft.recordStatus
+        ? 2
+        : null;
 
   return (
     <div
@@ -279,6 +286,13 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
               Before lodging, check every amount and pre-filled item in myTax.
               General information only—not tax advice.
             </div>
+            {!complete && (
+              <div className="wizard-warning" role="status">
+                <AlertTriangle size={16} />
+                Complete your residency, income and record details before saving
+                this preparation draft.
+              </div>
+            )}
           </div>
         )}
 
@@ -310,10 +324,12 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
           ) : (
             <button
               className="wizard-next"
-              disabled={!complete}
-              onClick={() => onSave(draft)}
+              onClick={() =>
+                complete ? onSave(draft) : setStep(firstRequiredStep ?? 0)
+              }
             >
-              Save for this session <Check size={16} />
+              {complete ? "Save for this session" : "Complete required details"}{" "}
+              <Check size={16} />
             </button>
           )}
         </footer>
