@@ -1,0 +1,48 @@
+name: Deploy to R2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --no-frozen-lockfile
+      - name: Build
+        env:
+          VITE_COMMIT_SHA: ${{ github.sha }}
+        run: pnpm build
+      - name: Mint deploy credentials
+        run: |
+          OIDC=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.proappstore.online" | jq -r '.value')
+          [ -n "$OIDC" ] && [ "$OIDC" != "null" ] || { echo "::error::could not obtain OIDC token"; exit 1; }
+          RESP=$(curl -sS -X POST "https://api.proappstore.online/v1/apps/${{ github.event.repository.name }}/deploy-credentials" -H "Authorization: Bearer $OIDC")
+          AKID=$(echo "$RESP" | jq -r '.accessKeyId // empty')
+          [ -n "$AKID" ] || { echo "::error::deploy credentials failed"; exit 1; }
+          echo "::add-mask::$(echo "$RESP" | jq -r '.secretAccessKey')"
+          echo "::add-mask::$(echo "$RESP" | jq -r '.sessionToken')"
+          {
+            echo "AWS_ACCESS_KEY_ID=$AKID"
+            echo "AWS_SECRET_ACCESS_KEY=$(echo "$RESP" | jq -r '.secretAccessKey')"
+            echo "AWS_SESSION_TOKEN=$(echo "$RESP" | jq -r '.sessionToken')"
+            echo "R2_ENDPOINT=$(echo "$RESP" | jq -r '.endpoint')"
+          } >> "$GITHUB_ENV"
+      - name: Upload to R2
+        env:
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 sync web/dist "s3://pas-apps/apps/${{ github.event.repository.name }}/" --endpoint-url "$R2_ENDPOINT" --delete --no-progress
