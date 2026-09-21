@@ -23,7 +23,10 @@ function safeFallback(message: string): GuideResponse {
       reply:
         "For work-from-home expenses, keep a record of your hours and the evidence needed for the ATO method you use. Check the current ATO guidance before making any claim; AusTax cannot decide what you can claim.",
       sources: [
-        { title: "ATO work-from-home expenses", url: "https://www.ato.gov.au/individuals-and-families/income-deductions-and-offsets/deductions-you-can-claim/work-related-expenses/working-from-home-expenses" },
+        {
+          title: "ATO working-from-home expenses",
+          url: "https://www.ato.gov.au/api/public/content/0-b7755b71-423a-413f-8ea9-0cf06cf2857a",
+        },
       ],
     };
   }
@@ -31,9 +34,6 @@ function safeFallback(message: string): GuideResponse {
     return {
       reply:
         "Keep your private health insurance statement ready. Review the pre-filled details in myTax and check them against your statement before lodging.",
-      sources: [
-        { title: "ATO private health insurance", url: "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/private-health-insurance" },
-      ],
     };
   }
   return {
