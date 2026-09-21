@@ -7,10 +7,33 @@
   --line: #dde2dc;
   --line-strong: #cdd7d0;
   --panel: #fff;
+  --text-scale: 1;
   font-family: "Manrope", sans-serif;
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
+}
+:root[data-text-size="small"] {
+  --text-scale: 0.875;
+  font-size: 14px;
+}
+:root[data-text-size="default"] {
+  --text-scale: 1;
+  font-size: 16px;
+}
+:root[data-text-size="large"] {
+  --text-scale: 1.125;
+  font-size: 18px;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #111815;
+  --ink: #edf4ef;
+  --accent: #83d3b8;
+  --muted: #b1c0b8;
+  --line: #314139;
+  --line-strong: #43554b;
+  --panel: #18231e;
 }
 * {
   box-sizing: border-box;
@@ -907,6 +930,171 @@ main {
   border: 0;
   background: none;
   color: #78857f;
+}
+.profile-panel {
+  width: min(490px, calc(100vw - 32px));
+  max-height: min(720px, calc(100dvh - 36px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 25px;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: 0 22px 55px rgba(15, 32, 24, 0.24);
+}
+.profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.profile-head h2 {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font:
+    600 29px "Fraunces",
+    Georgia,
+    serif;
+  letter-spacing: -0.03em;
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--paper) 70%, var(--panel));
+}
+.profile-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 41px;
+  height: 41px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #c88158;
+  font-size: 12px;
+  font-weight: 700;
+}
+.profile-identity span:last-child {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.profile-identity b {
+  color: var(--ink);
+  font-size: 13px;
+}
+.preference-group {
+  margin: 0;
+  padding: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.preference-group legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.preference-group > p,
+.preference-note {
+  margin: 8px 0 13px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.preference-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.preference-options button {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.preference-options button:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.preference-options button.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.text-size-options button {
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 4px;
+}
+.size-sample {
+  color: currentColor;
+  font-family: "Fraunces", serif;
+  line-height: 1;
+}
+.size-small {
+  font-size: 14px;
+}
+.size-default {
+  font-size: 18px;
+}
+.size-large {
+  font-size: 23px;
+}
+.preference-note {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .year-pill,
+:root[data-theme="dark"] .estimate-card,
+:root[data-theme="dark"] .next-card,
+:root[data-theme="dark"] .progress-card,
+:root[data-theme="dark"] .assistant-card,
+:root[data-theme="dark"] .deductions-card,
+:root[data-theme="dark"] .documents-card,
+:root[data-theme="dark"] .modal,
+:root[data-theme="dark"] .wizard {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--panel);
+}
+:root[data-theme="dark"] .brand,
+:root[data-theme="dark"] .welcome-row h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] .return-status strong,
+:root[data-theme="dark"] .deduction-copy b,
+:root[data-theme="dark"] .file-row b {
+  color: var(--ink);
+}
+:root[data-theme="dark"] .subhead,
+:root[data-theme="dark"] .nav-item,
+:root[data-theme="dark"] .tax-agent,
+:root[data-theme="dark"] .help-button,
+:root[data-theme="dark"] .estimate-card > p,
+:root[data-theme="dark"] .next-card p,
+:root[data-theme="dark"] .assistant-intro,
+:root[data-theme="dark"] .deduction-copy small,
+:root[data-theme="dark"] .file-row small {
+  color: var(--muted);
 }
 .wizard-backdrop {
   position: fixed;

@@ -11,10 +11,15 @@ import {
   LockKeyhole,
   Menu,
   MoreHorizontal,
+  Monitor,
+  Moon,
   Plus,
   ReceiptText,
+  Settings2,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Type,
   X,
 } from "lucide-react";
 import { askAusTaxGuide } from "./lib/pags";
@@ -58,7 +63,15 @@ type StoredPreparation = {
   documents: string[];
 };
 
+type ThemePreference = "system" | "light" | "dark";
+type TextSizePreference = "small" | "default" | "large";
+type Preferences = {
+  theme: ThemePreference;
+  textSize: TextSizePreference;
+};
+
 const preparationStorageKey = "austax-preparation-v1";
+const preferencesStorageKey = "austax-preferences-v1";
 
 function loadPreparation(): StoredPreparation {
   try {
@@ -76,6 +89,26 @@ function loadPreparation(): StoredPreparation {
     };
   } catch {
     return { draft: null, deductions: starterDeductions, documents: [] };
+  }
+}
+
+function loadPreferences(): Preferences {
+  try {
+    const saved = localStorage.getItem(preferencesStorageKey);
+    if (!saved) return { theme: "system", textSize: "default" };
+    const parsed = JSON.parse(saved) as Partial<Preferences>;
+    return {
+      theme: ["system", "light", "dark"].includes(parsed.theme ?? "")
+        ? (parsed.theme as ThemePreference)
+        : "system",
+      textSize: ["small", "default", "large"].includes(
+        parsed.textSize ?? "",
+      )
+        ? (parsed.textSize as TextSizePreference)
+        : "default",
+    };
+  } catch {
+    return { theme: "system", textSize: "default" };
   }
 }
 
@@ -104,6 +137,8 @@ export default function App() {
   );
   const [draftStep, setDraftStep] = useState(0);
   const [documentMessage, setDocumentMessage] = useState("");
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [preferences, setPreferences] = useState(loadPreferences);
   const fileInput = useRef<HTMLInputElement>(null);
   const totalDeductions = useMemo(
     () => deductions.reduce((total, item) => total + item.amount, 0),
@@ -117,6 +152,18 @@ export default function App() {
       JSON.stringify({ draft, deductions, documents }),
     );
   }, [deductions, documents, draft]);
+
+  useEffect(() => {
+    const resolvedTheme =
+      preferences.theme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : preferences.theme;
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.textSize = preferences.textSize;
+    localStorage.setItem(preferencesStorageKey, JSON.stringify(preferences));
+  }, [preferences]);
 
   async function askAssistant() {
     const cleaned = question.trim();
@@ -222,12 +269,8 @@ export default function App() {
           </button>
           <button
             className="avatar"
-            aria-label="Show privacy reminder"
-            onClick={() =>
-              setReply(
-                "AusTax keeps this preparation checklist in this browser session. Do not enter a TFN, myGov password, bank login, or identity-document number.",
-              )
-            }
+            aria-label="Open profile and preferences"
+            onClick={() => setShowPreferences(true)}
           >
             AS
           </button>
@@ -656,6 +699,104 @@ export default function App() {
           onSave={saveDraft}
           onClose={() => setShowDraft(false)}
         />
+      )}
+      {showPreferences && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preferences-title"
+        >
+          <section className="profile-panel">
+            <header className="profile-head">
+              <div>
+                <p className="eyebrow">YOUR PROFILE</p>
+                <h2 id="preferences-title">Preferences</h2>
+              </div>
+              <button
+                className="modal-close"
+                onClick={() => setShowPreferences(false)}
+                aria-label="Close preferences"
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <div className="profile-identity">
+              <span className="profile-avatar">AS</span>
+              <span>
+                <b>AusTax profile</b>
+                <small>Preparation data stays in this browser session.</small>
+              </span>
+            </div>
+            <fieldset className="preference-group">
+              <legend>
+                <Settings2 size={16} /> Appearance
+              </legend>
+              <p>Choose how AusTax looks on this device.</p>
+              <div className="preference-options">
+                {(
+                  [
+                    ["system", "System", Monitor],
+                    ["light", "Light", Sun],
+                    ["dark", "Dark", Moon],
+                  ] as const
+                ).map(([value, label, Icon]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={
+                      preferences.theme === value ? "selected" : ""
+                    }
+                    onClick={() =>
+                      setPreferences((current) => ({
+                        ...current,
+                        theme: value,
+                      }))
+                    }
+                  >
+                    <Icon size={16} /> {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="preference-group">
+              <legend>
+                <Type size={16} /> Text size
+              </legend>
+              <p>Adjust the reading size used across the app.</p>
+              <div className="preference-options text-size-options">
+                {(
+                  [
+                    ["small", "Small", "Aa"],
+                    ["default", "Default", "Aa"],
+                    ["large", "Large", "Aa"],
+                  ] as const
+                ).map(([value, label, sample]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={
+                      preferences.textSize === value ? "selected" : ""
+                    }
+                    onClick={() =>
+                      setPreferences((current) => ({
+                        ...current,
+                        textSize: value,
+                      }))
+                    }
+                  >
+                    <span className={`size-sample size-${value}`}>{sample}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <p className="preference-note">
+              Preferences are saved on this device. AusTax does not save your
+              TFN, myGov password, bank login, or identity-document number.
+            </p>
+          </section>
+        </div>
       )}
     </div>
   );
