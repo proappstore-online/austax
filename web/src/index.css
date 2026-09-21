@@ -1,3 +1,13 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+}
+
 :root {
   color-scheme: light dark;
   --paper: #f7f7f2;
@@ -7,6 +17,11 @@
   --line: #dde2dc;
   --line-strong: #cdd7d0;
   --panel: #fff;
+  --surface-header: #fcfcf8;
+  --surface-soft: #f6faf6;
+  --surface-subtle: #f3f7f3;
+  --surface-warm: #fbf1df;
+  --surface-note: #edf6f0;
   --text-scale: 1;
   font-family: "Manrope", sans-serif;
   color: var(--ink);
@@ -34,6 +49,11 @@
   --line: #314139;
   --line-strong: #43554b;
   --panel: #18231e;
+  --surface-header: #16201b;
+  --surface-soft: #1c2a23;
+  --surface-subtle: #223128;
+  --surface-warm: #2b281c;
+  --surface-note: #1c3027;
 }
 * {
   box-sizing: border-box;
@@ -56,7 +76,7 @@ button {
 .topbar {
   height: 70px;
   border-bottom: 1px solid var(--line);
-  background: rgba(252, 252, 248, 0.94);
+  background: color-mix(in srgb, var(--surface-header) 94%, transparent);
   backdrop-filter: blur(14px);
   position: fixed;
   z-index: 20;
@@ -100,7 +120,7 @@ button {
   border: 1px solid #dde2dc;
   border-radius: 7px;
   color: #4a5953;
-  background: #fff;
+  background: var(--panel);
   font-size: 12px;
   font-weight: 600;
 }
@@ -141,7 +161,7 @@ button {
   width: 232px;
   padding: 31px 16px 25px;
   border-right: 1px solid #dde2dc;
-  background: #fcfcf8;
+  background: var(--surface-header);
 }
 .nav-label,
 .eyebrow {
@@ -171,8 +191,8 @@ button {
   margin: 1px 0;
 }
 .nav-item:hover {
-  background: #f0f3ee;
-  color: #1c2925;
+  background: var(--surface-subtle);
+  color: var(--ink);
 }
 .nav-item.active {
   color: #155b50;
@@ -282,7 +302,7 @@ main {
   padding: 9px 16px 9px 10px;
   border: 1px solid #dce4dd;
   border-radius: 10px;
-  background: #fdfefa;
+  background: var(--panel);
 }
 .status-ring {
   display: grid;
@@ -384,7 +404,7 @@ main {
 .next-card {
   min-height: 196px;
   padding: 21px 23px;
-  background: #fbf1df;
+  background: var(--surface-warm);
   border: 1px solid #efe0c8;
   border-radius: 13px;
 }
@@ -490,7 +510,7 @@ main {
 .progress-card {
   border: 1px solid #e0e5df;
   border-radius: 11px;
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 .progress-meta {
@@ -540,7 +560,7 @@ main {
 }
 .step:hover {
   border-radius: 7px;
-  background: #f4f7f3;
+  background: var(--surface-subtle);
 }
 .step-dot {
   display: grid;
@@ -583,7 +603,7 @@ main {
   border: 1px solid #dae5df;
   padding: 20px;
   border-radius: 11px;
-  background: #f6faf6;
+  background: var(--surface-soft);
 }
 .assistant-head {
   display: flex;
@@ -631,7 +651,7 @@ main {
   border: 1px solid #dce8e1;
   border-radius: 6px;
   text-align: left;
-  background: #fff;
+  background: var(--panel);
   color: #3d5148;
   font-size: 11px;
 }
@@ -644,7 +664,7 @@ main {
   margin-top: 12px;
   padding: 10px;
   border-radius: 7px;
-  background: #e8f2eb;
+  background: var(--surface-note);
   color: #436257;
   font-size: 11px;
   line-height: 1.4;
@@ -658,7 +678,7 @@ main {
   margin-top: 14px;
   border: 1px solid #cfddd5;
   border-radius: 7px;
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
 }
 .ask-box input {
@@ -709,7 +729,7 @@ main {
   border: 1px solid #e1e6e1;
   border-radius: 10px;
   overflow: hidden;
-  background: #fff;
+  background: var(--panel);
 }
 .deduction-row {
   display: flex;
@@ -727,7 +747,7 @@ main {
   border-bottom: 0;
 }
 .deduction-row:hover {
-  background: #f9fbf9;
+  background: var(--surface-subtle);
 }
 .deduction-icon {
   display: grid;
@@ -796,7 +816,7 @@ main {
   padding: 17px 20px;
   border: 1px solid #cce1d7;
   border-radius: 11px;
-  background: #edf6f0;
+  background: var(--surface-note);
 }
 .draft-banner h2 {
   margin: 6px 0 4px;
@@ -862,7 +882,7 @@ main {
   border-radius: 8px;
   padding: 17px 10px;
   color: #62756b;
-  background: #fafcf9;
+  background: var(--surface-soft);
   font-size: 11px;
 }
 .dropzone svg {
@@ -890,7 +910,7 @@ main {
   width: min(100%, 385px);
   padding: 28px;
   border-radius: 14px;
-  background: #fbfcf8;
+  background: var(--panel);
   box-shadow: 0 20px 70px rgba(15, 44, 34, 0.25);
 }
 .modal h2 {
@@ -916,7 +936,7 @@ main {
   margin-top: 8px;
   padding: 11px 12px;
   color: #314239;
-  background: white;
+  background: var(--panel);
   text-align: left;
   font-size: 12px;
 }
@@ -1096,6 +1116,35 @@ main {
 :root[data-theme="dark"] .file-row small {
   color: var(--muted);
 }
+:root[data-theme="dark"] .year-pill,
+:root[data-theme="dark"] .return-status,
+:root[data-theme="dark"] .suggestions button,
+:root[data-theme="dark"] .ask-box,
+:root[data-theme="dark"] .deduction-list,
+:root[data-theme="dark"] .dropzone,
+:root[data-theme="dark"] .choice-row button,
+:root[data-theme="dark"] .wizard-option,
+:root[data-theme="dark"] .wizard-footer,
+:root[data-theme="dark"] .mobile-menu {
+  border-color: var(--line);
+  background: var(--panel);
+}
+:root[data-theme="dark"] .next-card h2,
+:root[data-theme="dark"] .step-title,
+:root[data-theme="dark"] .wizard-head h2,
+:root[data-theme="dark"] .wizard-body legend,
+:root[data-theme="dark"] .draft-summary b,
+:root[data-theme="dark"] .modal > button:not(.modal-close),
+:root[data-theme="dark"] .wizard-option,
+:root[data-theme="dark"] .choice-row button,
+:root[data-theme="dark"] .ask-box input {
+  color: var(--ink);
+}
+:root[data-theme="dark"] .choice-row button.selected,
+:root[data-theme="dark"] .wizard-option.selected {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+}
 .wizard-backdrop {
   position: fixed;
   inset: 0;
@@ -1112,7 +1161,7 @@ main {
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  background: #fcfdf9;
+  background: var(--panel);
   box-shadow: 0 22px 80px rgba(9, 35, 27, 0.32);
   overflow: hidden;
 }
@@ -1133,7 +1182,7 @@ main {
   position: relative;
   height: 28px;
   padding: 11px 30px 0;
-  background: #f6f8f4;
+  background: var(--surface-subtle);
   color: #819087;
   font:
     500 9px ui-monospace,
@@ -1180,7 +1229,7 @@ main {
   border-radius: 7px;
   padding: 9px 13px;
   color: #53645b;
-  background: #fff;
+  background: var(--panel);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1204,7 +1253,7 @@ main {
   border-radius: 8px;
   padding: 9px 10px;
   color: #3e5148;
-  background: #fff;
+  background: var(--panel);
   text-align: left;
   font-size: 12px;
 }
@@ -1238,7 +1287,7 @@ main {
   border-radius: 8px;
   padding: 11px 12px;
   color: #48645a;
-  background: #edf5f0;
+  background: var(--surface-note);
   font-size: 11px;
   line-height: 1.45;
 }
@@ -1260,7 +1309,7 @@ main {
   gap: 11px 15px;
   border-radius: 9px;
   padding: 16px;
-  background: #f3f7f3;
+  background: var(--surface-subtle);
 }
 .draft-summary span {
   color: #809088;
@@ -1280,7 +1329,7 @@ main {
   justify-content: space-between;
   padding: 16px 30px;
   border-top: 1px solid #e6ebe5;
-  background: #fff;
+  background: var(--panel);
 }
 .wizard-back,
 .wizard-next {
@@ -1346,7 +1395,7 @@ main {
     padding: 7px 10px;
     margin-bottom: 20px;
     border-radius: 6px;
-    background: #fff;
+    background: var(--panel);
     color: #345246;
     font-size: 12px;
     font-weight: 600;

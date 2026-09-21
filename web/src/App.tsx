@@ -702,12 +702,12 @@ export default function App() {
       )}
       {showPreferences && (
         <div
-          className="modal-backdrop"
+          className="modal-backdrop fixed inset-0 grid place-items-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="preferences-title"
         >
-          <section className="profile-panel">
+          <section className="profile-panel w-[min(490px,calc(100vw-32px))] border-line bg-panel text-ink shadow-2xl">
             <header className="profile-head">
               <div>
                 <p className="eyebrow">YOUR PROFILE</p>
@@ -721,7 +721,7 @@ export default function App() {
                 <X size={18} />
               </button>
             </header>
-            <div className="profile-identity">
+            <div className="profile-identity border-line bg-paper">
               <span className="profile-avatar">AS</span>
               <span>
                 <b>AusTax profile</b>
@@ -733,7 +733,7 @@ export default function App() {
                 <Settings2 size={16} /> Appearance
               </legend>
               <p>Choose how AusTax looks on this device.</p>
-              <div className="preference-options">
+              <div className="preference-options grid grid-cols-3 gap-2">
                 {(
                   [
                     ["system", "System", Monitor],
@@ -764,7 +764,7 @@ export default function App() {
                 <Type size={16} /> Text size
               </legend>
               <p>Adjust the reading size used across the app.</p>
-              <div className="preference-options text-size-options">
+              <div className="preference-options text-size-options grid grid-cols-3 gap-2">
                 {(
                   [
                     ["small", "Small", "Aa"],
