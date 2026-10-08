@@ -146,6 +146,82 @@ button {
   font-size: 12px;
   font-weight: 600;
 }
+.year-pill span {
+  color: #728078;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.year-pill select {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.tax-year-guidance {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, .8fr);
+  gap: 14px 36px;
+  align-items: start;
+  margin: 24px 0 34px;
+  padding: 24px 28px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--panel);
+}
+.tax-year-guidance h2 {
+  margin: 4px 0 8px;
+  font: 600 21px/1.2 "Fraunces", Georgia, serif;
+}
+.tax-year-guidance p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.tax-year-guidance table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tax-year-guidance th,
+.tax-year-guidance td {
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.tax-year-guidance th:last-child,
+.tax-year-guidance td:last-child {
+  text-align: right;
+}
+.tax-year-guidance a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  grid-column: 1 / -1;
+  width: fit-content;
+  color: #19594d;
+  font-size: 12px;
+  font-weight: 700;
+}
+.income-year-field {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.income-year-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--panel);
+}
 .top-actions {
   display: flex;
   align-items: center;
@@ -1438,9 +1514,10 @@ main {
     height: 61px;
     padding: 0 20px;
   }
-  .year-pill {
-    display: none;
-  }
+  .year-pill { left: 54%; gap: 2px; padding: 5px 6px; font-size: 11px; }
+  .year-pill span { display: none; }
+  .year-pill select { max-width: 74px; }
+  .tax-year-guidance { grid-template-columns: 1fr; padding: 19px; }
   .help-button span {
     display: none;
   }

@@ -24,6 +24,14 @@ import {
 } from "lucide-react";
 import { askAusTaxGuide } from "./lib/pags";
 import { DraftWizard, type ReturnDraft } from "./components/DraftWizard";
+import {
+  getAvailableIncomeYears,
+  getCurrentIncomeYear,
+  getDraftIncomeYear,
+  getIncomeYearLabel,
+  incomeYearRates,
+  isAvailableIncomeYear,
+} from "./lib/income-year";
 
 type Deduction = {
   title: string;
@@ -118,6 +126,7 @@ function isReturnDraft(value: unknown): value is ReturnDraft {
   if (!value || typeof value !== "object") return false;
   const draft = value as Partial<ReturnDraft>;
   return (
+    (draft.incomeYear === undefined || isAvailableIncomeYear(draft.incomeYear)) &&
     typeof draft.residency === "string" &&
     Array.isArray(draft.income) &&
     draft.income.every((item) => typeof item === "string") &&
@@ -158,6 +167,9 @@ const format = (amount: number) =>
 
 export default function App() {
   const [savedPreparation] = useState(loadPreparation);
+  const [selectedYear, setSelectedYear] = useState(
+    getDraftIncomeYear(savedPreparation.draft, getCurrentIncomeYear()),
+  );
   const [active, setActive] = useState("Overview");
   const [deductions, setDeductions] = useState(savedPreparation.deductions);
   const [documents, setDocuments] = useState<string[]>(
@@ -278,6 +290,7 @@ export default function App() {
   }
 
   function saveDraft(nextDraft: ReturnDraft) {
+    if (nextDraft.incomeYear) setSelectedYear(nextDraft.incomeYear);
     setDraft(nextDraft);
     setShowDraft(false);
     setActive("Overview");
@@ -297,9 +310,23 @@ export default function App() {
           <span className="brand-mark">a</span>
           <span>AusTax</span>
         </a>
-        <div className="year-pill">
-          2025–26 return <ChevronRight size={14} />
-        </div>
+        <label className="year-pill">
+          <span>Return year</span>
+          <select
+            aria-label="Return income year"
+            value={selectedYear ?? ""}
+            onChange={(event) => {
+              const year = event.target.value;
+              setSelectedYear(year || undefined);
+              setDraft((current) => current ? { ...current, incomeYear: year || undefined } : current);
+            }}
+          >
+            {!selectedYear && <option value="">Select year</option>}
+            {getAvailableIncomeYears().map((year) => (
+              <option value={year} key={year}>{getIncomeYearLabel(year)}</option>
+            ))}
+          </select>
+        </label>
         <div className="top-actions">
           <button
             className="help-button"
@@ -403,6 +430,7 @@ export default function App() {
             <div>
               <p className="eyebrow">SESSION PREPARATION DRAFT</p>
               <h2>Your checklist is ready for review</h2>
+              <p>Return year: {draft.incomeYear ? getIncomeYearLabel(draft.incomeYear) : "Not recorded — select a year when you review this draft."}</p>
               <p>
                 {draft.income.length} income area
                 {draft.income.length === 1 ? "" : "s"} ·{" "}
@@ -465,6 +493,26 @@ export default function App() {
               </a>
             </div>
           </article>
+        </section>
+
+        <section className="tax-year-guidance" aria-labelledby="tax-year-guidance-title">
+          <div>
+            <p className="eyebrow">YEAR-SPECIFIC GUIDANCE</p>
+            <h2 id="tax-year-guidance-title">Australian resident individual income tax rates · {getIncomeYearLabel(selectedYear ?? getCurrentIncomeYear())}</h2>
+            <p>Marginal rates for ordinary taxable income only. These do not include the Medicare levy, offsets, surcharges, or other adjustments, and are not a personal tax calculation.</p>
+          </div>
+          {incomeYearRates[selectedYear ?? ""] ? (
+            <table>
+              <thead><tr><th>Taxable income band</th><th>Rate on this band</th></tr></thead>
+              <tbody>{incomeYearRates[selectedYear ?? ""].map((bracket) => (
+                <tr key={bracket.lowerBound}>
+                  <td>{bracket.lowerBound === 0 ? "Up to $18,200" : bracket.upperBound === null ? `Over $${bracket.lowerBound.toLocaleString("en-AU")}` : `$${(bracket.lowerBound + 1).toLocaleString("en-AU")}–$${bracket.upperBound.toLocaleString("en-AU")}`}</td>
+                  <td>{bracket.rate}%</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          ) : <p>Rates for this year have not been added. Check the ATO source before relying on year-specific guidance.</p>}
+          <a href="https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents" target="_blank" rel="noreferrer">Check current ATO resident tax rates <ArrowUpRight size={14} /></a>
         </section>
 
         <section className="content-grid">
@@ -740,6 +788,7 @@ export default function App() {
         <DraftWizard
           key={`${draftStep}-${draft ? "saved" : "new"}`}
           initial={draft ?? undefined}
+          selectedYear={selectedYear ?? getCurrentIncomeYear()}
           startStep={draftStep}
           onSave={saveDraft}
           onClose={() => setShowDraft(false)}

@@ -8,8 +8,10 @@ import {
   LockKeyhole,
   X,
 } from "lucide-react";
+import { getAvailableIncomeYears, getDraftIncomeYear, getIncomeYearLabel } from "../lib/income-year";
 
 export type ReturnDraft = {
+  incomeYear?: string;
   residency: string;
   income: string[];
   deductions: string[];
@@ -19,6 +21,7 @@ export type ReturnDraft = {
 
 type Props = {
   initial?: ReturnDraft;
+  selectedYear: string;
   startStep?: number;
   onSave: (draft: ReturnDraft) => void;
   onClose: () => void;
@@ -88,10 +91,11 @@ function ToggleList({
   );
 }
 
-export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) {
+export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onClose }: Props) {
   const [step, setStep] = useState(startStep);
   const [draft, setDraft] = useState<ReturnDraft>(
     initial ?? {
+      incomeYear: getDraftIncomeYear(null, selectedYear),
       residency: "",
       income: [],
       deductions: [],
@@ -107,10 +111,10 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
     "Your preparation draft",
   ][step];
   const complete = useMemo(
-    () => Boolean(draft.residency && draft.income.length && draft.recordStatus),
+    () => Boolean(draft.incomeYear && draft.residency && draft.income.length && draft.recordStatus),
     [draft],
   );
-  const firstRequiredStep = !draft.residency
+  const firstRequiredStep = !draft.incomeYear || !draft.residency
     ? 0
     : !draft.income.length
       ? 1
@@ -151,9 +155,28 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
               enter a TFN, myGov password, bank login, or identity-document
               number here.
             </p>
+            <label className="income-year-field">
+              Return income year
+              <select
+                value={draft.incomeYear ?? ""}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    ...(event.target.value ? { incomeYear: event.target.value } : { incomeYear: undefined }),
+                  })
+                }
+              >
+                <option value="">Year not recorded</option>
+                {getAvailableIncomeYears().map((year) => (
+                  <option value={year} key={year}>{getIncomeYearLabel(year)}</option>
+                ))}
+              </select>
+            </label>
             <fieldset>
               <legend>
-                For the 2025–26 income year, were you an Australian resident for
+                {draft.incomeYear
+                  ? `For the ${getIncomeYearLabel(draft.incomeYear)} income year, were you an Australian resident for`
+                  : "For the selected income year, were you an Australian resident for"}
                 tax purposes?
               </legend>
               <div className="choice-row">
@@ -260,6 +283,8 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
             <div className="draft-summary">
               <span>Residency</span>
               <b>{draft.residency || "Needs review"}</b>
+              <span>Return income year</span>
+              <b>{draft.incomeYear ? getIncomeYearLabel(draft.incomeYear) : "Not recorded"}</b>
               <span>Income areas</span>
               <b>
                 {draft.income.length
@@ -289,7 +314,7 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
             {!complete && (
               <div className="wizard-warning" role="status">
                 <AlertTriangle size={16} />
-                Complete your residency, income and record details before saving
+                Select an income year and complete your residency, income and record details before saving
                 this preparation draft.
               </div>
             )}
@@ -313,7 +338,7 @@ export function DraftWizard({ initial, startStep = 0, onSave, onClose }: Props) 
             <button
               className="wizard-next"
               disabled={
-                (step === 0 && !draft.residency) ||
+                (step === 0 && (!draft.incomeYear || !draft.residency)) ||
                 (step === 1 && !draft.income.length) ||
                 (step === 2 && !draft.recordStatus)
               }
