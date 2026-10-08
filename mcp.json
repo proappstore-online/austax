@@ -1,13 +1,44 @@
 {
-  "servers": {
-    "proagentstore": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://mcp.proagentstore.online/mcp"]
+  "tools": [
+    {
+      "name": "list_preparation_drafts",
+      "description": "List the signed-in user's AusTax preparation checklists. These are organisation-only checklists, not tax advice and cannot lodge a return.",
+      "operation": "query",
+      "sql": "SELECT id, income_year, residency, income_salary_wages, income_bank_interest, income_dividends, income_rental, income_sole_trader, income_shares_crypto, income_foreign, income_government_payments, deduction_work_from_home, deduction_work_related, deduction_work_travel, deduction_self_education, deduction_donations, deduction_tax_affairs, consideration_private_health, consideration_help_loan, consideration_rental_property, consideration_investments, consideration_foreign_residency, consideration_business_income, record_status, created_at, updated_at FROM return_drafts WHERE user_id = :__user_id ORDER BY updated_at DESC LIMIT :limit",
+      "params": { "limit": { "type": "integer", "optional": true, "default": 20, "max": 100, "description": "Maximum number of preparation drafts to return" } },
+      "requires_auth": true
+    },
+    {
+      "name": "get_preparation_draft",
+      "description": "Get one signed-in user's AusTax preparation checklist by ID. It contains only predefined checklist selections, not tax identifiers, documents, credentials, calculations, or lodging data.",
+      "operation": "query",
+      "sql": "SELECT id, income_year, residency, income_salary_wages, income_bank_interest, income_dividends, income_rental, income_sole_trader, income_shares_crypto, income_foreign, income_government_payments, deduction_work_from_home, deduction_work_related, deduction_work_travel, deduction_self_education, deduction_donations, deduction_tax_affairs, consideration_private_health, consideration_help_loan, consideration_rental_property, consideration_investments, consideration_foreign_residency, consideration_business_income, record_status, created_at, updated_at FROM return_drafts WHERE id = :draft_id AND user_id = :__user_id LIMIT 1",
+      "params": { "draft_id": { "type": "string", "description": "Opaque preparation draft ID" } },
+      "requires_auth": true
+    },
+    {
+      "name": "save_preparation_draft",
+      "description": "Create or update the signed-in user's predefined AusTax preparation checklist. Do not use this tool for TFNs, bank details, credentials, identity documents, tax calculations, personal tax advice, or lodging.",
+      "operation": "execute",
+      "sql": "INSERT INTO return_drafts (id, user_id, income_year, residency, income_salary_wages, income_bank_interest, income_dividends, income_rental, income_sole_trader, income_shares_crypto, income_foreign, income_government_payments, deduction_work_from_home, deduction_work_related, deduction_work_travel, deduction_self_education, deduction_donations, deduction_tax_affairs, consideration_private_health, consideration_help_loan, consideration_rental_property, consideration_investments, consideration_foreign_residency, consideration_business_income, record_status, created_at, updated_at) SELECT :draft_id, :__user_id, :income_year, :residency, :income_salary_wages, :income_bank_interest, :income_dividends, :income_rental, :income_sole_trader, :income_shares_crypto, :income_foreign, :income_government_payments, :deduction_work_from_home, :deduction_work_related, :deduction_work_travel, :deduction_self_education, :deduction_donations, :deduction_tax_affairs, :consideration_private_health, :consideration_help_loan, :consideration_rental_property, :consideration_investments, :consideration_foreign_residency, :consideration_business_income, :record_status, :__now, :__now WHERE length(:draft_id) BETWEEN 1 AND 128 AND :income_year GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]' AND :residency IN ('Yes', 'No', 'Not sure') AND :record_status IN ('Ready to review', 'Some to find', 'Not sure') ON CONFLICT(id) DO UPDATE SET income_year = excluded.income_year, residency = excluded.residency, income_salary_wages = excluded.income_salary_wages, income_bank_interest = excluded.income_bank_interest, income_dividends = excluded.income_dividends, income_rental = excluded.income_rental, income_sole_trader = excluded.income_sole_trader, income_shares_crypto = excluded.income_shares_crypto, income_foreign = excluded.income_foreign, income_government_payments = excluded.income_government_payments, deduction_work_from_home = excluded.deduction_work_from_home, deduction_work_related = excluded.deduction_work_related, deduction_work_travel = excluded.deduction_work_travel, deduction_self_education = excluded.deduction_self_education, deduction_donations = excluded.deduction_donations, deduction_tax_affairs = excluded.deduction_tax_affairs, consideration_private_health = excluded.consideration_private_health, consideration_help_loan = excluded.consideration_help_loan, consideration_rental_property = excluded.consideration_rental_property, consideration_investments = excluded.consideration_investments, consideration_foreign_residency = excluded.consideration_foreign_residency, consideration_business_income = excluded.consideration_business_income, record_status = excluded.record_status, updated_at = :__now WHERE return_drafts.user_id = :__user_id",
+      "params": {
+        "draft_id": { "type": "string", "description": "Client-generated opaque preparation draft ID" },
+        "income_year": { "type": "string", "description": "Australian income year in YYYY-YY form" },
+        "residency": { "type": "string", "description": "One of Yes, No, or Not sure" },
+        "income_salary_wages": { "type": "boolean" }, "income_bank_interest": { "type": "boolean" }, "income_dividends": { "type": "boolean" }, "income_rental": { "type": "boolean" }, "income_sole_trader": { "type": "boolean" }, "income_shares_crypto": { "type": "boolean" }, "income_foreign": { "type": "boolean" }, "income_government_payments": { "type": "boolean" },
+        "deduction_work_from_home": { "type": "boolean" }, "deduction_work_related": { "type": "boolean" }, "deduction_work_travel": { "type": "boolean" }, "deduction_self_education": { "type": "boolean" }, "deduction_donations": { "type": "boolean" }, "deduction_tax_affairs": { "type": "boolean" },
+        "consideration_private_health": { "type": "boolean" }, "consideration_help_loan": { "type": "boolean" }, "consideration_rental_property": { "type": "boolean" }, "consideration_investments": { "type": "boolean" }, "consideration_foreign_residency": { "type": "boolean" }, "consideration_business_income": { "type": "boolean" },
+        "record_status": { "type": "string", "description": "One of Ready to review, Some to find, or Not sure" }
+      },
+      "requires_auth": true
+    },
+    {
+      "name": "delete_preparation_draft",
+      "description": "Delete one signed-in user's AusTax preparation checklist. This never lodges or changes an ATO return.",
+      "operation": "execute",
+      "sql": "DELETE FROM return_drafts WHERE id = :draft_id AND user_id = :__user_id",
+      "params": { "draft_id": { "type": "string", "description": "Opaque preparation draft ID" } },
+      "requires_auth": true
     }
-  },
-  "austaxGuide": {
-    "agentId": "dfd67189-3aff-4662-85f2-bf1bdaa0133b",
-    "instanceId": "00bf92c7-1cee-4fa4-823a-280f5206f755",
-    "runtimeTool": "chat_with_instance"
-  }
+  ]
 }

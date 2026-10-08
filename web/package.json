@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@proappstore/sdk": "^1.16.36",
     "lucide-react": "^0.460.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

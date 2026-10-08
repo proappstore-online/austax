@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { askAusTaxGuide } from "./lib/pags";
 import { DraftWizard, type ReturnDraft } from "./components/DraftWizard";
+import { loadLatestPreparationDraft, savePreparationDraft } from "./lib/preparation-actions";
 import {
   getAvailableIncomeYears,
   getCurrentIncomeYear,
@@ -189,6 +190,7 @@ export default function App() {
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState(loadPreferences);
   const fileInput = useRef<HTMLInputElement>(null);
+  const draftId = useRef<string | null>(null);
   const totalDeductions = useMemo(
     () => deductions.reduce((total, item) => total + item.amount, 0),
     [deductions],
@@ -205,6 +207,19 @@ export default function App() {
       // Keep the current session usable when storage is disabled or full.
     }
   }, [deductions, documents, draft]);
+
+  useEffect(() => {
+    void loadLatestPreparationDraft()
+      .then((saved) => {
+        if (!saved) return;
+        draftId.current = saved.id;
+        setDraft(saved.draft);
+        if (saved.draft.incomeYear) setSelectedYear(saved.draft.incomeYear);
+      })
+      .catch(() => {
+        // The session cache keeps the prototype usable when PAS auth is unavailable.
+      });
+  }, []);
 
   useEffect(() => {
     const resolvedTheme =
@@ -292,6 +307,10 @@ export default function App() {
   function saveDraft(nextDraft: ReturnDraft) {
     if (nextDraft.incomeYear) setSelectedYear(nextDraft.incomeYear);
     setDraft(nextDraft);
+    draftId.current ??= crypto.randomUUID();
+    void savePreparationDraft(draftId.current, nextDraft).catch(() => {
+      // The in-browser cache remains available while an authenticated save is retried.
+    });
     setShowDraft(false);
     setActive("Overview");
   }
@@ -318,7 +337,14 @@ export default function App() {
             onChange={(event) => {
               const year = event.target.value;
               setSelectedYear(year || undefined);
-              setDraft((current) => current ? { ...current, incomeYear: year || undefined } : current);
+              if (draft) {
+                const nextDraft = { ...draft, incomeYear: year || undefined };
+                setDraft(nextDraft);
+                draftId.current ??= crypto.randomUUID();
+                void savePreparationDraft(draftId.current, nextDraft).catch(() => {
+                  // Keep the locally cached preparation checklist available on network failure.
+                });
+              }
             }}
           >
             {!selectedYear && <option value="">Select year</option>}
@@ -428,7 +454,7 @@ export default function App() {
         {draft && (
           <section className="draft-banner">
             <div>
-              <p className="eyebrow">SESSION PREPARATION DRAFT</p>
+              <p className="eyebrow">PREPARATION DRAFT</p>
               <h2>Your checklist is ready for review</h2>
               <p>Return year: {draft.incomeYear ? getIncomeYearLabel(draft.incomeYear) : "Not recorded — select a year when you review this draft."}</p>
               <p>

@@ -26,6 +26,20 @@ jobs:
         env:
           VITE_COMMIT_SHA: ${{ github.sha }}
         run: pnpm build
+
+      - name: Apply D1 migrations (migrations.json -> platform, keyless)
+        if: hashFiles('migrations.json') != ''
+        run: |
+          # Apply committed additive schema changes before tool registration so
+          # an MCP action can never reference a table that is not live yet.
+          OIDC=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.proappstore.online" | jq -r '.value')
+          [ -n "$OIDC" ] && [ "$OIDC" != "null" ] || { echo "::error::could not obtain OIDC token"; exit 1; }
+          RESP=$(curl -sS -X POST "https://api.proappstore.online/v1/apps/${{ github.event.repository.name }}/migrate/oidc" -H "Authorization: Bearer $OIDC" -H "Content-Type: application/json" --data-binary @migrations.json)
+          if echo "$RESP" | jq -e '.ok == true' >/dev/null; then
+            echo "Applied migration(s): $(echo "$RESP" | jq -c '.applied // []'); already: $(echo "$RESP" | jq -c '.already // []')"
+          else
+            echo "::error::migration failed: $(echo "$RESP" | jq -c '.error // .')"; exit 1
+          fi
       - name: Mint deploy credentials
         run: |
           OIDC=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.proappstore.online" | jq -r '.value')
@@ -46,3 +60,17 @@ jobs:
           AWS_DEFAULT_REGION: auto
         run: |
           aws s3 sync web/dist "s3://pas-apps/apps/${{ github.event.repository.name }}/" --endpoint-url "$R2_ENDPOINT" --delete --no-progress
+
+      - name: Register app tools (mcp.json -> platform, keyless)
+        if: hashFiles('mcp.json') != ''
+        run: |
+          OIDC=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.proappstore.online" | jq -r '.value')
+          [ -n "$OIDC" ] && [ "$OIDC" != "null" ] || { echo "::error::could not obtain OIDC token"; exit 1; }
+          RESP=$(curl -sS -X PUT "https://api.proappstore.online/v1/apps/${{ github.event.repository.name }}/tools/oidc" -H "Authorization: Bearer $OIDC" -H "Content-Type: application/json" --data-binary @mcp.json)
+          if echo "$RESP" | jq -e '.ok == true' >/dev/null; then
+            echo "Registered $(echo "$RESP" | jq -r '.registered') app tool(s)"
+          else
+            echo "::error::tools registration failed: $(echo "$RESP" | jq -c '.error // .')"
+            echo "$RESP" | jq -r '.details[]? | "::error::" + .'
+            exit 1
+          fi
