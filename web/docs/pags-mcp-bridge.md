@@ -32,4 +32,4 @@ The bridge returns a small `{ "reply": "…", "sources": [] }` object. It must n
 - Do not provide a lodge/submit operation. The final user hand-off is to ATO online services (myTax) or a registered tax agent.
 - Include the general-information disclaimer and official ATO source links in replies.
 
-`src/lib/pags.ts` contains the browser client contract. Deployment needs a server-side MCP bridge and a PAGS service credential stored only as a server secret.
+`src/lib/pags.ts` contains the browser client contract. `src/server/pags-input.ts` is the server request boundary: it validates the body, rejects sensitive input, and only then invokes the supplied forwarder. The Vite dev and preview middleware use this boundary and fail closed because this repository has no server-side PAGS credential or configured production bridge. A production adapter must call `handlePagsChat` with its authenticated MCP forwarder; it must not forward the request body directly. Keep the PAGS service credential only as a server secret.

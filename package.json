@@ -10,6 +10,6 @@
     "build": "pnpm --filter @austax/web build",
     "preview": "pnpm --filter @austax/web preview",
     "typecheck": "pnpm --filter @austax/web exec tsc -b",
-    "test": "pnpm --filter @austax/web exec tsc -b"
+    "test": "pnpm --filter @austax/web exec tsc -b && node --experimental-strip-types --test web/test/*.test.mjs"
   }
 }
