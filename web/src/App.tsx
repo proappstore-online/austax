@@ -79,17 +79,54 @@ function loadPreparation(): StoredPreparation {
     if (!saved) {
       return { draft: null, deductions: starterDeductions, documents: [] };
     }
-    const parsed = JSON.parse(saved) as Partial<StoredPreparation>;
+    const parsed: unknown = JSON.parse(saved);
+    if (!parsed || typeof parsed !== "object") {
+      return { draft: null, deductions: starterDeductions, documents: [] };
+    }
+    const value = parsed as Partial<StoredPreparation>;
+    const draft = isReturnDraft(value.draft) ? value.draft : null;
+    const deductions = Array.isArray(value.deductions)
+      ? value.deductions.filter(isDeduction)
+      : starterDeductions;
+    const documents = Array.isArray(value.documents)
+      ? value.documents.filter((item): item is string => typeof item === "string")
+      : [];
     return {
-      draft: parsed.draft ?? null,
-      deductions: Array.isArray(parsed.deductions)
-        ? parsed.deductions
-        : starterDeductions,
-      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+      draft,
+      deductions,
+      documents,
     };
   } catch {
     return { draft: null, deductions: starterDeductions, documents: [] };
   }
+}
+
+function isDeduction(value: unknown): value is Deduction {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<Deduction>;
+  return (
+    typeof item.title === "string" &&
+    typeof item.note === "string" &&
+    typeof item.amount === "number" &&
+    Number.isFinite(item.amount) &&
+    (item.icon === "receipt" || item.icon === "file") &&
+    typeof item.done === "boolean"
+  );
+}
+
+function isReturnDraft(value: unknown): value is ReturnDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Partial<ReturnDraft>;
+  return (
+    typeof draft.residency === "string" &&
+    Array.isArray(draft.income) &&
+    draft.income.every((item) => typeof item === "string") &&
+    Array.isArray(draft.deductions) &&
+    draft.deductions.every((item) => typeof item === "string") &&
+    Array.isArray(draft.considerations) &&
+    draft.considerations.every((item) => typeof item === "string") &&
+    typeof draft.recordStatus === "string"
+  );
 }
 
 function loadPreferences(): Preferences {
@@ -147,10 +184,14 @@ export default function App() {
   const completeCount = deductions.filter((item) => item.done).length;
 
   useEffect(() => {
-    sessionStorage.setItem(
-      preparationStorageKey,
-      JSON.stringify({ draft, deductions, documents }),
-    );
+    try {
+      sessionStorage.setItem(
+        preparationStorageKey,
+        JSON.stringify({ draft, deductions, documents }),
+      );
+    } catch {
+      // Keep the current session usable when storage is disabled or full.
+    }
   }, [deductions, documents, draft]);
 
   useEffect(() => {
@@ -162,7 +203,11 @@ export default function App() {
         : preferences.theme;
     document.documentElement.dataset.theme = resolvedTheme;
     document.documentElement.dataset.textSize = preferences.textSize;
-    localStorage.setItem(preferencesStorageKey, JSON.stringify(preferences));
+    try {
+      localStorage.setItem(preferencesStorageKey, JSON.stringify(preferences));
+    } catch {
+      // Appearance preferences still apply for this page view.
+    }
   }, [preferences]);
 
   async function askAssistant() {
@@ -439,19 +484,19 @@ export default function App() {
             <div className="progress-card">
               <div className="progress-meta">
                 <span>RETURN PROGRESS</span>
-                <b>{draft ? "5 of 5 complete" : "0 of 5 complete"}</b>
+                <b>{draft ? "3 of 5 areas started" : "0 of 5 areas started"}</b>
               </div>
               <div className="progress-bar">
-                <i style={{ width: draft ? "100%" : "0%" }} />
+                <i style={{ width: draft ? "60%" : "0%" }} />
               </div>
               <div className="steps">
                 {(
                   [
-                    ["Your details", draft ? "Complete" : "Not started", Boolean(draft)],
-                    ["Income", draft ? "Complete" : "Not started", Boolean(draft)],
-                    ["Deductions", draft ? "Complete" : "Not started", Boolean(draft)],
-                    ["Medicare & offsets", draft ? "Complete" : "Not started", Boolean(draft)],
-                    ["Final review", draft ? "Complete" : "Locked", Boolean(draft)],
+                    ["Your details", draft ? "Reviewed" : "Not started", Boolean(draft)],
+                    ["Income", draft ? "Checklist saved" : "Not started", Boolean(draft)],
+                    ["Deductions", draft ? "Checklist saved" : "Not started", Boolean(draft)],
+                    ["Medicare & offsets", draft ? "Needs review" : "Not started", false],
+                    ["Final review", "Not started", false],
                   ] as [string, string, boolean][]
                 ).map(([title, status, done], index) => (
                   <button
@@ -572,7 +617,6 @@ export default function App() {
                             ? {
                                 ...record,
                                 done: true,
-                                amount: record.amount || 120,
                               }
                             : record,
                         ),
@@ -601,7 +645,8 @@ export default function App() {
             </button>
             <p className="microcopy">
               {completeCount} {completeCount === 1 ? "category" : "categories"}{" "}
-              reviewed. Keep records for five years.
+              reviewed. Record retention periods vary; check the ATO guidance
+              for your situation.
             </p>
           </article>
 

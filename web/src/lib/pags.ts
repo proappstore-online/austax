@@ -54,7 +54,30 @@ export async function askAusTaxGuide(message: string): Promise<GuideResponse> {
       body: JSON.stringify({ instanceId: AUSTAX_GUIDE.instanceId, message }),
       signal: AbortSignal.timeout(7_000),
     });
-    if (response.ok) return (await response.json()) as GuideResponse;
+    if (response.ok) {
+      const result: unknown = await response.json();
+      if (
+        result &&
+        typeof result === "object" &&
+        "reply" in result &&
+        typeof result.reply === "string" &&
+        result.reply.trim()
+      ) {
+        const sources =
+          "sources" in result && Array.isArray(result.sources)
+            ? result.sources.filter(
+                (source): source is { title: string; url: string } =>
+                  !!source &&
+                  typeof source === "object" &&
+                  "title" in source &&
+                  typeof source.title === "string" &&
+                  "url" in source &&
+                  typeof source.url === "string",
+              )
+            : undefined;
+        return { reply: result.reply, ...(sources ? { sources } : {}) };
+      }
+    }
   } catch {
     // The static app can still provide bounded, general-information guidance.
   }
