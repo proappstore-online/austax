@@ -18,7 +18,7 @@ describe("DraftWizard keyboard and accessibility", () => {
     triggerButton?.remove();
   });
 
-  it("1. Initial focus: opens with focus on first focusable element inside dialog", () => {
+  it("1. Initial focus: opens with focus on close button, dialog has accessible name", () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
 
@@ -36,14 +36,14 @@ describe("DraftWizard keyboard and accessibility", () => {
     expect(modal).toHaveAttribute("aria-modal", "true");
     expect(modal).toHaveAttribute("aria-labelledby", "draft-title");
 
-    // Check that the modal has the correct title
+    // Check that the modal has the correct title (accessible name)
     const title = screen.getByRole("heading", { name: /Before we begin/i });
     expect(title).toHaveAttribute("id", "draft-title");
+    expect(title.textContent).toBe("Before we begin");
 
-    // Focus should be on one of the first focusable elements inside the modal
-    // Could be the income year select or a residency button depending on timing
-    const activeElement = document.activeElement;
-    expect(modal.contains(activeElement)).toBe(true);
+    // Focus should initially be on the close button (first focusable when opening)
+    const closeButton = screen.getByRole("button", { name: "Close draft" });
+    expect(document.activeElement).toBe(closeButton);
   });
 
   it("2. Escape key: closes modal and calls onClose", async () => {
@@ -69,7 +69,7 @@ describe("DraftWizard keyboard and accessibility", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("3. Tab focus boundary: Tab from last focusable wraps to first", async () => {
+  it("3. Tab focus boundary: Tab from last focusable wraps to first (step 0 and step 1)", async () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
     const user = userEvent.setup();
@@ -82,28 +82,42 @@ describe("DraftWizard keyboard and accessibility", () => {
       />
     );
 
-    // Get all focusable elements within the modal
     const modal = screen.getByRole("dialog") as HTMLDivElement;
-    const focusables = Array.from(
+
+    // Test on Step 0
+    const getModalFocusables = () => Array.from(
       modal.querySelectorAll(
         'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
     ) as HTMLElement[];
 
+    let focusables = getModalFocusables();
     expect(focusables.length).toBeGreaterThan(0);
-
-    // Focus the last focusable element
-    const lastFocusable = focusables[focusables.length - 1];
+    let lastFocusable = focusables[focusables.length - 1];
     lastFocusable.focus();
     expect(document.activeElement).toBe(lastFocusable);
-
-    // Press Tab - should wrap to first focusable
     await user.keyboard("{Tab}");
+    expect(document.activeElement).toBe(focusables[0]);
 
+    // Progress to Step 1 (income step)
+    const selectYear = screen.getByRole("combobox", { name: /Return income year/ }) as HTMLSelectElement;
+    await user.selectOptions(selectYear, "2025-26");
+    const yesButton = screen.getByRole("button", { name: "Yes" });
+    await user.click(yesButton);
+    const continueButton = screen.getByRole("button", { name: /Continue/ });
+    await user.click(continueButton);
+
+    // Test Tab wrapping on Step 1 (income step)
+    focusables = getModalFocusables();
+    expect(focusables.length).toBeGreaterThan(0);
+    lastFocusable = focusables[focusables.length - 1];
+    lastFocusable.focus();
+    expect(document.activeElement).toBe(lastFocusable);
+    await user.keyboard("{Tab}");
     expect(document.activeElement).toBe(focusables[0]);
   });
 
-  it("4. Shift+Tab focus boundary: Shift+Tab from first focusable wraps to last", async () => {
+  it("4. Shift+Tab focus boundary: Shift+Tab from first wraps to last (step 0 and step 2)", async () => {
     const onClose = vi.fn();
     const onSave = vi.fn();
     const user = userEvent.setup();
@@ -116,24 +130,43 @@ describe("DraftWizard keyboard and accessibility", () => {
       />
     );
 
-    // Get all focusable elements within the modal
     const modal = screen.getByRole("dialog") as HTMLDivElement;
-    const focusables = Array.from(
+    const getModalFocusables = () => Array.from(
       modal.querySelectorAll(
         'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
     ) as HTMLElement[];
 
+    // Test on Step 0
+    let focusables = getModalFocusables();
     expect(focusables.length).toBeGreaterThan(0);
-
-    // Focus the first focusable element
-    const firstFocusable = focusables[0];
+    let firstFocusable = focusables[0];
     firstFocusable.focus();
     expect(document.activeElement).toBe(firstFocusable);
-
-    // Press Shift+Tab - should wrap to last focusable
     await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
 
+    // Progress to Step 2 (record status step)
+    const selectYear = screen.getByRole("combobox", { name: /Return income year/ }) as HTMLSelectElement;
+    await user.selectOptions(selectYear, "2025-26");
+    const yesButton = screen.getByRole("button", { name: "Yes" });
+    await user.click(yesButton);
+    let continueButton = screen.getByRole("button", { name: /Continue/ });
+    await user.click(continueButton);
+
+    // Step 1: select income
+    const salaryButton = screen.getByRole("button", { name: "Salary or wages" });
+    await user.click(salaryButton);
+    continueButton = screen.getByRole("button", { name: /Continue/ });
+    await user.click(continueButton);
+
+    // Test Shift+Tab on Step 2 (record status step)
+    focusables = getModalFocusables();
+    expect(focusables.length).toBeGreaterThan(0);
+    firstFocusable = focusables[0];
+    firstFocusable.focus();
+    expect(document.activeElement).toBe(firstFocusable);
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
     expect(document.activeElement).toBe(focusables[focusables.length - 1]);
   });
 
@@ -264,17 +297,31 @@ describe("DraftWizard keyboard and accessibility", () => {
     let continueButton = screen.getByRole("button", { name: /Continue/ });
     await user.click(continueButton);
 
-    // Step 1: Select income
+    // Step 1: Verify Continue is disabled before income selection
+    let incomeStep1ContinueButton = screen.getByRole("button", { name: /Continue/ });
+    expect(incomeStep1ContinueButton).toBeDisabled();
+
+    // Select income
     const salaryButton = screen.getByRole("button", { name: "Salary or wages" });
     await user.click(salaryButton);
+
+    // Now Continue should be enabled
+    expect(incomeStep1ContinueButton).not.toBeDisabled();
 
     // Continue to step 2
     continueButton = screen.getByRole("button", { name: /Continue/ });
     await user.click(continueButton);
 
-    // Step 2: Select record status (required to proceed)
+    // Step 2: Verify Continue is disabled before record status selection
+    let recordStep2ContinueButton = screen.getByRole("button", { name: /Continue/ });
+    expect(recordStep2ContinueButton).toBeDisabled();
+
+    // Select record status (required to proceed)
     const recordReadyButton = screen.getByRole("button", { name: "Ready to review" });
     await user.click(recordReadyButton);
+
+    // Now Continue should be enabled
+    expect(recordStep2ContinueButton).not.toBeDisabled();
 
     // Continue to step 3
     continueButton = screen.getByRole("button", { name: /Continue/ });
@@ -299,6 +346,11 @@ describe("DraftWizard keyboard and accessibility", () => {
     expect(savedDraft.residency).toBe("Yes");
     expect(savedDraft.income).toContain("Salary or wages");
     expect(savedDraft.recordStatus).toBe("Ready to review");
+    // Verify deductions and considerations arrays (should be empty since none were selected)
+    expect(Array.isArray(savedDraft.deductions)).toBe(true);
+    expect(Array.isArray(savedDraft.considerations)).toBe(true);
+    expect(savedDraft.deductions.length).toBe(0);
+    expect(savedDraft.considerations.length).toBe(0);
   });
 
   it("9. Focus restore on unmount: returns focus to trigger after close", async () => {
