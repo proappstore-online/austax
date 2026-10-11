@@ -92,10 +92,11 @@ function ToggleList({
   );
 }
 
+export const MODAL_FOCUSABLES_SELECTOR = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 function getModalFocusables(modalRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] {
   if (!modalRef.current) return [];
-  const selector = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-  return Array.from(modalRef.current.querySelectorAll(selector));
+  return Array.from(modalRef.current.querySelectorAll(MODAL_FOCUSABLES_SELECTOR));
 }
 
 export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onClose }: Props) {
