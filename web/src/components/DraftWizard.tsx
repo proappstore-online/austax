@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -72,6 +72,7 @@ function ToggleList({
             type="button"
             key={item}
             className={`wizard-option ${checked ? "selected" : ""}`}
+            aria-pressed={checked}
             onClick={() =>
               onChange(
                 checked
@@ -91,6 +92,12 @@ function ToggleList({
   );
 }
 
+function getModalFocusables(modalRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] {
+  if (!modalRef.current) return [];
+  const selector = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  return Array.from(modalRef.current.querySelectorAll(selector));
+}
+
 export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onClose }: Props) {
   const [step, setStep] = useState(startStep);
   const [draft, setDraft] = useState<ReturnDraft>(
@@ -103,6 +110,9 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
       recordStatus: "",
     },
   );
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   const title = [
     "Before we begin",
     "Your income",
@@ -122,8 +132,46 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
         ? 2
         : null;
 
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const focusables = getModalFocusables(modalRef);
+    if (focusables.length > 0) {
+      focusables[0].focus();
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === "Tab") {
+        const focusables = getModalFocusables(modalRef);
+        if (focusables.length === 0) return;
+        const currentIndex = focusables.indexOf(document.activeElement as HTMLElement);
+        const lastIndex = focusables.length - 1;
+
+        if (event.shiftKey && currentIndex === 0) {
+          event.preventDefault();
+          focusables[lastIndex].focus();
+        } else if (!event.shiftKey && currentIndex === lastIndex) {
+          event.preventDefault();
+          focusables[0].focus();
+        }
+      }
+    };
+
+    modalRef.current?.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      modalRef.current?.removeEventListener("keydown", handleKeyDown);
+      if (previousFocusRef.current?.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [onClose]);
+
   return (
     <div
+      ref={modalRef}
       className="wizard-backdrop"
       role="dialog"
       aria-modal="true"
@@ -185,6 +233,7 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
                     type="button"
                     key={value}
                     className={draft.residency === value ? "selected" : ""}
+                    aria-pressed={draft.residency === value}
                     onClick={() => setDraft({ ...draft, residency: value })}
                   >
                     {value}
@@ -238,6 +287,7 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
                       type="button"
                       key={value}
                       className={draft.recordStatus === value ? "selected" : ""}
+                      aria-pressed={draft.recordStatus === value}
                       onClick={() =>
                         setDraft({ ...draft, recordStatus: value })
                       }
