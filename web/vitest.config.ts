@@ -10,6 +10,11 @@ export default defineConfig({
     setupFiles: ["./test/setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["**/node_modules", "**/dist", "**/*.mjs"],
-    threads: { singleThread: true },
+    poolOptions: {
+      threads: {
+        minThreads: 1,
+        maxThreads: 1,
+      },
+    },
   },
 });

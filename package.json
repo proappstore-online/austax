@@ -10,6 +10,6 @@
     "build": "pnpm --filter @austax/web build",
     "preview": "pnpm --filter @austax/web preview",
     "typecheck": "pnpm --filter @austax/web exec tsc -b",
-    "test": "pnpm --filter @austax/web exec tsc -b && pnpm --filter @austax/web exec vitest run --reporter=verbose && node --experimental-strip-types --test web/test/income-year.test.mjs web/test/mcp-manifest.test.mjs web/test/pags-input.test.mjs"
+    "test": "pnpm --filter @austax/web exec tsc -b && pnpm --filter @austax/web exec vitest run --reporter=verbose && node --experimental-strip-types --test web/test/*.test.mjs"
   }
 }
