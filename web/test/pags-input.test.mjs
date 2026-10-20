@@ -60,3 +60,19 @@ test("ordinary questions reach the forwarder unchanged", async () => {
   });
   assert.equal((await response.json()).reply, "Keep a record of your hours.");
 });
+
+test("oversized questions are rejected before the PAGS forwarder is called", async () => {
+  let forwarded = false;
+  const response = await post("a".repeat(2_001), async () => {
+    forwarded = true;
+    return { reply: "should never happen" };
+  });
+  assert.equal(response.status, 400);
+  assert.equal(forwarded, false);
+  assert.equal((await response.json()).error, "Message is too long.");
+});
+
+test("questions at the length limit are still forwarded", async () => {
+  const response = await post("a".repeat(2_000), async () => ({ reply: "ok" }));
+  assert.equal(response.status, 200);
+});

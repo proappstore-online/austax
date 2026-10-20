@@ -1,3 +1,6 @@
+/** Longer questions are rejected so unbounded text is never forwarded. */
+const MAX_MESSAGE_LENGTH = 2_000;
+
 /** User-safe response for questions containing sensitive personal information. */
 export const SENSITIVE_INPUT_REPLY =
   "For your safety, don’t share TFNs, passwords, bank login details, or identity-document numbers here. Remove those details and ask a general question, or use the official ATO service directly.";
@@ -46,6 +49,10 @@ export async function handlePagsChat(
     !body.message.trim()
   ) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  if (body.message.length > MAX_MESSAGE_LENGTH) {
+    return Response.json({ error: "Message is too long." }, { status: 400 });
   }
 
   if (containsSensitiveInput(body.message)) {
