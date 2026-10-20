@@ -31,133 +31,18 @@ import {
   getDraftIncomeYear,
   getIncomeYearLabel,
   incomeYearRates,
-  isAvailableIncomeYear,
 } from "./lib/income-year";
-
-type Deduction = {
-  title: string;
-  note: string;
-  amount: number;
-  icon: "receipt" | "file";
-  done: boolean;
-};
-
-const starterDeductions: Deduction[] = [
-  {
-    title: "Work from home",
-    note: "Hours worked and expenses",
-    amount: 0,
-    icon: "receipt",
-    done: false,
-  },
-  {
-    title: "Work-related expenses",
-    note: "Tools, travel, education and more",
-    amount: 0,
-    icon: "receipt",
-    done: false,
-  },
-  {
-    title: "Donations",
-    note: "Gifts to registered charities",
-    amount: 0,
-    icon: "file",
-    done: false,
-  },
-];
-
-type StoredPreparation = {
-  draft: ReturnDraft | null;
-  deductions: Deduction[];
-  documents: string[];
-};
-
-type ThemePreference = "system" | "light" | "dark";
-type TextSizePreference = "small" | "default" | "large";
-type Preferences = {
-  theme: ThemePreference;
-  textSize: TextSizePreference;
-};
-
-const preparationStorageKey = "austax-preparation-v1";
-const preferencesStorageKey = "austax-preferences-v1";
-
-function loadPreparation(): StoredPreparation {
-  try {
-    const saved = sessionStorage.getItem(preparationStorageKey);
-    if (!saved) {
-      return { draft: null, deductions: starterDeductions, documents: [] };
-    }
-    const parsed: unknown = JSON.parse(saved);
-    if (!parsed || typeof parsed !== "object") {
-      return { draft: null, deductions: starterDeductions, documents: [] };
-    }
-    const value = parsed as Partial<StoredPreparation>;
-    const draft = isReturnDraft(value.draft) ? value.draft : null;
-    const deductions = Array.isArray(value.deductions)
-      ? value.deductions.filter(isDeduction)
-      : starterDeductions;
-    const documents = Array.isArray(value.documents)
-      ? value.documents.filter((item): item is string => typeof item === "string")
-      : [];
-    return {
-      draft,
-      deductions,
-      documents,
-    };
-  } catch {
-    return { draft: null, deductions: starterDeductions, documents: [] };
-  }
-}
-
-function isDeduction(value: unknown): value is Deduction {
-  if (!value || typeof value !== "object") return false;
-  const item = value as Partial<Deduction>;
-  return (
-    typeof item.title === "string" &&
-    typeof item.note === "string" &&
-    typeof item.amount === "number" &&
-    Number.isFinite(item.amount) &&
-    (item.icon === "receipt" || item.icon === "file") &&
-    typeof item.done === "boolean"
-  );
-}
-
-function isReturnDraft(value: unknown): value is ReturnDraft {
-  if (!value || typeof value !== "object") return false;
-  const draft = value as Partial<ReturnDraft>;
-  return (
-    (draft.incomeYear === undefined || isAvailableIncomeYear(draft.incomeYear)) &&
-    typeof draft.residency === "string" &&
-    Array.isArray(draft.income) &&
-    draft.income.every((item) => typeof item === "string") &&
-    Array.isArray(draft.deductions) &&
-    draft.deductions.every((item) => typeof item === "string") &&
-    Array.isArray(draft.considerations) &&
-    draft.considerations.every((item) => typeof item === "string") &&
-    typeof draft.recordStatus === "string"
-  );
-}
-
-function loadPreferences(): Preferences {
-  try {
-    const saved = localStorage.getItem(preferencesStorageKey);
-    if (!saved) return { theme: "system", textSize: "default" };
-    const parsed = JSON.parse(saved) as Partial<Preferences>;
-    return {
-      theme: ["system", "light", "dark"].includes(parsed.theme ?? "")
-        ? (parsed.theme as ThemePreference)
-        : "system",
-      textSize: ["small", "default", "large"].includes(
-        parsed.textSize ?? "",
-      )
-        ? (parsed.textSize as TextSizePreference)
-        : "default",
-    };
-  } catch {
-    return { theme: "system", textSize: "default" };
-  }
-}
+import {
+  loadPreferences,
+  loadPreparation,
+  preferencesStorageKey,
+  preparationStorageKey,
+  starterDeductions,
+  type Deduction,
+  type Preferences,
+  type TextSizePreference,
+  type ThemePreference,
+} from "./lib/app-storage";
 
 const format = (amount: number) =>
   new Intl.NumberFormat("en-AU", {
@@ -305,13 +190,18 @@ export default function App() {
     );
   }
 
-  function saveDraft(nextDraft: ReturnDraft) {
-    if (nextDraft.incomeYear) setSelectedYear(nextDraft.incomeYear);
-    setDraft(nextDraft);
+  // The session cache keeps the draft if the authenticated save fails.
+  function persistDraft(nextDraft: ReturnDraft) {
     draftId.current ??= crypto.randomUUID();
     void savePreparationDraft(draftId.current, nextDraft).catch(() => {
       // The in-browser cache remains available while an authenticated save is retried.
     });
+  }
+
+  function saveDraft(nextDraft: ReturnDraft) {
+    if (nextDraft.incomeYear) setSelectedYear(nextDraft.incomeYear);
+    setDraft(nextDraft);
+    persistDraft(nextDraft);
     setShowDraft(false);
     setActive("Overview");
   }
@@ -341,10 +231,7 @@ export default function App() {
               if (draft) {
                 const nextDraft = { ...draft, incomeYear: year || undefined };
                 setDraft(nextDraft);
-                draftId.current ??= crypto.randomUUID();
-                void savePreparationDraft(draftId.current, nextDraft).catch(() => {
-                  // Keep the locally cached preparation checklist available on network failure.
-                });
+                persistDraft(nextDraft);
               }
             }}
           >
