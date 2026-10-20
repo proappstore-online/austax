@@ -1,3 +1,5 @@
+import { AUSTAX_GUIDE } from "../lib/pags.ts";
+
 /** Longer questions are rejected so unbounded text is never forwarded. */
 const MAX_MESSAGE_LENGTH = 2_000;
 
@@ -60,10 +62,7 @@ export async function handlePagsChat(
   }
 
   try {
-    const result = await forward(
-      "00bf92c7-1cee-4fa4-823a-280f5206f755",
-      body.message,
-    );
+    const result = await forward(AUSTAX_GUIDE.instanceId, body.message);
     if (
       result &&
       typeof result === "object" &&

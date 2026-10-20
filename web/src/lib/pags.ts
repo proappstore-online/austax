@@ -1,5 +1,4 @@
 export const AUSTAX_GUIDE = {
-  agentId: "dfd67189-3aff-4662-85f2-bf1bdaa0133b",
   instanceId: "00bf92c7-1cee-4fa4-823a-280f5206f755",
   name: "AusTax Guide",
 } as const;
