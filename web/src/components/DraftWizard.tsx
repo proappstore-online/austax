@@ -9,6 +9,11 @@ import {
   X,
 } from "lucide-react";
 import { getAvailableIncomeYears, getDraftIncomeYear, getIncomeYearLabel } from "../lib/income-year";
+import {
+  considerationOptions,
+  deductionOptions,
+  incomeOptions,
+} from "../lib/draft-options";
 
 export type ReturnDraft = {
   incomeYear?: string;
@@ -26,33 +31,6 @@ type Props = {
   onSave: (draft: ReturnDraft) => void;
   onClose: () => void;
 };
-
-const incomeOptions = [
-  "Salary or wages",
-  "Bank interest",
-  "Dividends or managed funds",
-  "Rental income",
-  "Sole trader or gig work",
-  "Shares or crypto sold",
-  "Foreign income",
-  "Government payments",
-];
-const deductionOptions = [
-  "Work from home",
-  "Work-related tools or equipment",
-  "Work travel or vehicle use",
-  "Self-education",
-  "Donations",
-  "Cost of managing tax affairs",
-];
-const considerationOptions = [
-  "Private health insurance",
-  "HELP / study loan",
-  "Rental property",
-  "Shares, crypto or other investments",
-  "Foreign income or overseas residency",
-  "Sole trader or business income",
-];
 
 function ToggleList({
   options,
