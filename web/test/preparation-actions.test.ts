@@ -28,10 +28,19 @@ const flagFields = [
   "consideration_business_income",
 ] as const;
 
+const savable = {
+  incomeYear: "2025-26",
+  residency: "Yes",
+  income: [],
+  deductions: [],
+  considerations: [],
+  recordStatus: "Not sure",
+};
+
 describe("preparation draft save payload", () => {
   beforeEach(() => {
     call.mockReset();
-    call.mockResolvedValue({});
+    call.mockResolvedValue({ meta: { changes: 1 } });
   });
 
   it("maps every selected checklist label to its stored flag", async () => {
@@ -89,6 +98,25 @@ describe("preparation draft save payload", () => {
       }),
     ).rejects.toThrow("A preparation draft needs an income year");
     expect(call).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the guarded insert writes no row", async () => {
+    call.mockResolvedValue({ meta: { changes: 0 } });
+    await expect(savePreparationDraft("draft-4", savable)).rejects.toThrow(
+      "The preparation draft was not saved",
+    );
+  });
+
+  it("rejects when the action reports no change count", async () => {
+    call.mockResolvedValue({});
+    await expect(savePreparationDraft("draft-5", savable)).rejects.toThrow(
+      "The preparation draft was not saved",
+    );
+  });
+
+  it("accepts a per-statement result shape", async () => {
+    call.mockResolvedValue({ results: [{ meta: { changes: 1 } }] });
+    await expect(savePreparationDraft("draft-6", savable)).resolves.toBeUndefined();
   });
 
   it("round-trips a stored row back to the same checklist labels", async () => {

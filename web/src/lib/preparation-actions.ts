@@ -38,9 +38,16 @@ export async function loadLatestPreparationDraft(): Promise<{ id: string; draft:
 const flagValues = (flags: readonly (readonly [string, FlagField])[], chosen: string[]) =>
   Object.fromEntries(flags.map(([label, field]) => [field, chosen.includes(label)]));
 
+type ExecuteResult = { meta?: { changes?: number }; results?: { meta?: { changes?: number } }[] };
+
+// The save statement's guards (and the owner check on conflict) write zero rows
+// instead of raising, so a refused save only shows up in the change count.
+const changedRows = (result: ExecuteResult | undefined) =>
+  result?.meta?.changes ?? result?.results?.at(-1)?.meta?.changes ?? 0;
+
 export async function savePreparationDraft(id: string, draft: ReturnDraft): Promise<void> {
   if (!draft.incomeYear) throw new Error("A preparation draft needs an income year");
-  await app.actions.call("save_preparation_draft", {
+  const result = await app.actions.call<ExecuteResult>("save_preparation_draft", {
     draft_id: id,
     income_year: draft.incomeYear,
     residency: draft.residency,
@@ -49,4 +56,5 @@ export async function savePreparationDraft(id: string, draft: ReturnDraft): Prom
     ...flagValues(deductionFlags, draft.deductions),
     ...flagValues(considerationFlags, draft.considerations),
   });
+  if (changedRows(result) < 1) throw new Error("The preparation draft was not saved");
 }
