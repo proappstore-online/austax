@@ -113,6 +113,10 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
   );
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // Parents pass a fresh onClose on every render; read it through a ref so
+  // re-rendering does not re-run the focus effect and move focus.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const title = [
     "Before we begin",
@@ -143,7 +147,7 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
       } else if (event.key === "Tab") {
         const focusables = getModalFocusables(modalRef);
         if (focusables.length === 0) return;
@@ -168,7 +172,7 @@ export function DraftWizard({ initial, selectedYear, startStep = 0, onSave, onCl
         previousFocusRef.current.focus();
       }
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
