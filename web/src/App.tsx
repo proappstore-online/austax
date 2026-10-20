@@ -211,7 +211,8 @@ export default function App() {
   useEffect(() => {
     void loadLatestPreparationDraft()
       .then((saved) => {
-        if (!saved) return;
+        // A draft saved or changed in this session is newer than the server copy.
+        if (!saved || draftId.current) return;
         draftId.current = saved.id;
         setDraft(saved.draft);
         if (saved.draft.incomeYear) setSelectedYear(saved.draft.incomeYear);
