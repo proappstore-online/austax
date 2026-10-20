@@ -51,10 +51,11 @@ export async function askAusTaxGuide(message: string): Promise<GuideResponse> {
     const response = await fetch("/api/pags/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instanceId: AUSTAX_GUIDE.instanceId, message }),
+      body: JSON.stringify({ message }),
       signal: AbortSignal.timeout(7_000),
     });
-    if (response.ok) {
+    // A 400 with a reply is the server's sensitive-input refusal; show it as-is.
+    if (response.ok || response.status === 400) {
       const result: unknown = await response.json();
       if (
         result &&
