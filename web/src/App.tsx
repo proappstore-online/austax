@@ -72,6 +72,8 @@ export default function App() {
   const [preferences, setPreferences] = useState(loadPreferences);
   const fileInput = useRef<HTMLInputElement>(null);
   const draftId = useRef<string | null>(null);
+  const saveAttempt = useRef(0);
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false);
   const totalDeductions = useMemo(
     () => deductions.reduce((total, item) => total + item.amount, 0),
     [deductions],
@@ -186,11 +188,15 @@ export default function App() {
     );
   }
 
-  // The session cache keeps the draft if the authenticated save fails.
+  // The session cache keeps the draft if the authenticated save fails; the
+  // failure is shown so the user does not take a local-only copy as saved.
   function persistDraft(nextDraft: ReturnDraft) {
     draftId.current ??= crypto.randomUUID();
+    const attempt = ++saveAttempt.current;
+    setDraftSaveFailed(false);
     void savePreparationDraft(draftId.current, nextDraft).catch(() => {
-      // The in-browser cache remains available while an authenticated save is retried.
+      // Only the latest save decides what the user is told.
+      if (attempt === saveAttempt.current) setDraftSaveFailed(true);
     });
   }
 
@@ -349,6 +355,13 @@ export default function App() {
                 {draft.considerations.length} extra review flag
                 {draft.considerations.length === 1 ? "" : "s"}
               </p>
+              {draftSaveFailed && (
+                <p className="save-warning" role="alert">
+                  This draft could not be saved to your AusTax account. It is
+                  kept in this browser session only — open the draft and save
+                  it again.
+                </p>
+              )}
             </div>
             <button className="link-button" onClick={() => openDraft()}>
               Open draft <ChevronRight size={16} />
@@ -362,7 +375,13 @@ export default function App() {
               PREPARATION SNAPSHOT <CircleHelp size={14} />
             </div>
             <div className="estimate-row">
-              <strong>{draft ? "Draft saved" : "Start here"}</strong>
+              <strong>
+                {draft
+                  ? draftSaveFailed
+                    ? "Saved in this browser only"
+                    : "Draft saved"
+                  : "Start here"}
+              </strong>
               <span className="estimate-badge">Preparation only</span>
             </div>
             <p>

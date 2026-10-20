@@ -928,6 +928,13 @@ main {
   color: #64776d;
   font-size: 11px;
 }
+.draft-banner p.save-warning {
+  margin-top: 8px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
 .file-row {
   display: flex;
   align-items: center;
@@ -1583,4 +1590,7 @@ main {
     width: 30px;
     height: 30px;
   }
+}
+:root[data-theme="dark"] .draft-banner p.save-warning {
+  color: #fdba74;
 }
